@@ -1,7 +1,11 @@
 from app import mysql, session
 from Blockchain import Block, Blockchain
+
+
 class InvalidTransactionException(Exception): pass
 class InsufficientFundsException(Exception): pass
+
+
 
 class Table():
     def __init__(self, table_name, *args):
@@ -116,6 +120,7 @@ def get_balance(username):
             balance += float(data[2])
     return balance
 
+
 def get_blockchain():
     blockchain = Blockchain()
     blockchain_sql = Table("blockchain", "number", "hash", "previous", "data", "nonce")
@@ -130,3 +135,4 @@ def sync_blockchain(blockchain):
 
     for block in blockchain.chain:
         blockchain_sql.insert(str(block.number), block.hash(), block.previous_hash, block.data, block.nonce)
+

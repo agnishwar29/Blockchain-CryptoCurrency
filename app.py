@@ -1,6 +1,7 @@
 from flask import Flask, render_template, flash, redirect, url_for, session, request, logging
 from passlib.hash import sha256_crypt
 from flask_mysqldb import MySQL
+from functools import wraps
 
 import sqlhelpers
 from password import password
@@ -17,6 +18,16 @@ app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 mysql = MySQL(app)
 
+def is_logged_in(f):
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        if 'logged_in' in session:
+            return f(*args, **kwargs)
+        else:
+            flash("Unauthorized, please login", "danger")
+            return redirect(url_for('login'))
+
+    return wrap
 
 def log_in_user(username):
     users = Table("users", "name","email","username","password")
@@ -71,7 +82,25 @@ def login():
                 return redirect(url_for('login'))
     return render_template('login.html')
 
+@app.route("/transaction", methods=['GET','POST'])
+@is_logged_in
+def transaction():
+    form = SendMoneyForm(request.form)
+    balance = get_balance(session.get('username'))
+
+    if request.method == 'POST':
+        try:
+            send_money(session.get('username'), form.username.data, form.amount.data)
+            flash("Money Sent!", "success")
+        except Exception as e:
+            flash(str(e), 'danger')
+
+        return redirect(url_for('transaction'))
+
+    return render_template('transaction.html', balance=balance,form=form)
+
 @app.route("/logout")
+@is_logged_in
 def logout():
     session.clear()
     flash('Logout success',"success")
@@ -79,6 +108,7 @@ def logout():
 
 
 @app.route("/dashboard")
+@is_logged_in
 def dashboard():
     return render_template('dashboard.html', session= session)
 

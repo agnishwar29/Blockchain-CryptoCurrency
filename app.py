@@ -7,6 +7,7 @@ import sqlhelpers
 from password import password
 from sqlhelpers import *
 from forms import *
+import time
 
 app = Flask(__name__)
 
@@ -97,7 +98,24 @@ def transaction():
 
         return redirect(url_for('transaction'))
 
-    return render_template('transaction.html', balance=balance,form=form)
+    return render_template('transaction.html', balance=balance,form=form, page='transaction')
+
+@app.route("/buy", methods=['GET','POST'])
+@is_logged_in
+def buy():
+    form = BuyForm(request.form)
+    balance = get_balance(session.get('username'))
+
+    if request.method == 'POST':
+        try:
+            send_money("BANK",session.get('username') , form.amount.data)
+            flash("Purchase Successful", "success")
+        except Exception as e:
+            flash(str(e), 'danger')
+
+        return redirect(url_for('dashboard'))
+
+    return render_template('buy.html', balance=balance,form=form, page='buy')
 
 @app.route("/logout")
 @is_logged_in
@@ -110,7 +128,9 @@ def logout():
 @app.route("/dashboard")
 @is_logged_in
 def dashboard():
-    return render_template('dashboard.html', session= session)
+    blockchain = get_blockchain().chain
+    ct = time.strftime("%I:%M %p")
+    return render_template('dashboard.html', session= session, ct=ct, blockchain=blockchain, page='dashboard')
 
 @app.route("/")
 def index():
